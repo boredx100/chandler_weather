@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chandler Weather | Backyard Station</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,Segoe UI,Arial,sans-serif;background:#0a1422;color:#eef5ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 75% -15%,#213f5b 0,transparent 48%),#0a1422;min-height:100vh}
+main{max-width:1100px;margin:auto;padding:28px 20px 60px}.top{display:flex;justify-content:space-between;gap:20px;align-items:center;flex-wrap:wrap}
+.eyebrow{font-size:11px;letter-spacing:2px;color:#8bb2d4;font-weight:800}h1{font-size:clamp(30px,5vw,52px);margin:8px 0 4px;letter-spacing:-1.5px}
+.muted{color:#a2b6cb}.pill{border:1px solid #36506a;border-radius:100px;padding:9px 14px;color:#b9d0e4;font-size:13px}
+button{background:#1c3954;border:1px solid #426484;color:white;border-radius:12px;padding:10px 14px;cursor:pointer;font:inherit}button:hover{background:#285172}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:24px}.toolbar .spacer{flex:1}
+.hero{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;margin-top:22px}
+.card{border:1px solid #284058;border-radius:22px;background:linear-gradient(145deg,#1b3047,#132438);padding:24px;box-shadow:0 12px 40px #0002}
+.temp{font-size:clamp(64px,10vw,110px);font-weight:750;letter-spacing:-7px;line-height:1.12;margin:14px 0}
+.biglabel{font-size:12px;letter-spacing:1.5px;color:#a6bed6;font-weight:800;text-transform:uppercase}
+.sun{font-size:64px;line-height:1.1}.statgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:16px}
+.stat{min-height:140px}.value{font-size:clamp(27px,4vw,38px);font-weight:750;margin:18px 0 4px;letter-spacing:-1px}
+.chartcard{margin-top:16px}svg.chart{width:100%;height:235px;display:block;overflow:visible}
+.chartgrid{stroke:#38506a;stroke-width:1;stroke-dasharray:4 5}.chartline{stroke:#f4c66b;stroke-width:3;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.chartfill{fill:#f4c66b;opacity:.09}.axis{fill:#8daac5;font-size:11px}
+.settings{margin-top:18px;padding:20px;border:1px solid #426484;background:#10253a;border-radius:18px;display:none}
+.settings.show{display:block}.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{font-size:12px;color:#a9c1d8;display:block;margin-bottom:5px}input{width:100%;padding:11px 12px;border:1px solid #45617b;border-radius:10px;background:#091b2d;color:white;font-size:15px}
+.note{font-size:12px;color:#9eb5ca;line-height:1.6}.error{color:#ffb5a9}.ok{color:#8ae6b4}
+.footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:18px;font-size:12px;color:#90a9c2}
+@media(max-width:680px){.hero{grid-template-columns:1fr}.statgrid{gap:10px}.card{padding:18px}.formgrid{grid-template-columns:1fr}.temp{letter-spacing:-4px}}
+</style></head>
+<body><main>
+<header class="top"><div><div class="eyebrow">PERSONAL WEATHER NETWORK</div><h1>Chandler Weather</h1><div class="muted">Backyard station · ESP8266 solar weather monitor</div></div><div class="pill" id="status">● Not connected</div></header>
+<div class="toolbar"><span class="muted" id="updated">Waiting for station data</span><span class="spacer"></span><button id="refresh">↻ Refresh</button><button id="configure">⚙ Station settings</button></div>
+<section class="settings" id="settings"><h2 style="margin-top:0">Connect your ThingSpeak channel</h2>
+<div class="formgrid"><div><label for="channel">Channel ID</label><input id="channel" placeholder="e.g. 1234567" inputmode="numeric"></div>
+<div><label for="readkey">Read API key (only for private channels)</label><input id="readkey" type="password" placeholder="Leave blank for public channel"></div></div>
+<p class="note">Find the Channel ID on your ThingSpeak channel page. For a public channel, no key is needed. A private channel's read key is stored only in this browser, so use this approach only on devices you trust. Never enter your Write API Key here.</p>
+<button id="save">Save and connect</button> <button id="demo">Preview sample data</button>
+<p class="note" id="configmessage"></p></section>
+<section class="hero"><div class="card"><div class="biglabel">Outdoor temperature</div><div class="temp" id="temperature">--.-°</div><div class="muted" id="feels">Heat index: --</div><div style="margin-top:28px" class="muted">🌡️ &nbsp; Measured by your backyard station</div></div>
+<div class="card"><div class="biglabel">Local conditions</div><div class="sun">☀️</div><div style="font-size:25px;font-weight:700;margin:10px 0" id="conditions">Station measurements</div><div class="muted">Live observations from your own sensors, not an internet forecast.</div><div style="margin-top:26px;color:#9fb8d0;font-size:13px" id="age">Awaiting first update</div></div></section>
+<section class="statgrid">
+<div class="card stat"><div class="biglabel">💧 Humidity</div><div class="value" id="humidity">--%</div><div class="muted">Relative humidity</div></div>
+<div class="card stat"><div class="biglabel">🧭 Barometric pressure</div><div class="value" id="pressure">--</div><div class="muted">inHg · converted from hPa</div></div>
+<div class="card stat"><div class="biglabel">🌫️ Dew point</div><div class="value" id="dewpoint">--°F</div><div class="muted">Moisture in the air</div></div>
+<div class="card stat"><div class="biglabel">🔋 Battery voltage</div><div class="value" id="battery">-- V</div><div class="muted">Solar station power</div></div>
+</section>
+<section class="card chartcard"><div class="top"><div><div class="biglabel">Temperature history</div><h2 style="margin:8px 0">Last 24 hours</h2></div><div class="muted">°F</div></div>
+<svg class="chart" viewBox="0 0 900 235" preserveAspectRatio="none" aria-label="24-hour temperature history chart">
+<g id="grid"></g><path id="area" class="chartfill"/><path id="line" class="chartline"/><g id="ticks"></g></svg>
+<div class="muted" style="font-size:12px" id="chartnote">Connect your channel to display historical readings.</div></section>
+<div class="footer"><span>Chandler Weather · Custom station dashboard</span><span id="footerstatus">Auto-refresh every 5 minutes</span></div>
+</main>
+<script>
+const $=id=>document.getElementById(id), fields=['temperature','humidity','pressure','battery','dewpoint','feels'];
+const config=()=>({id:localStorage.getItem('cw_channel')||'',key:localStorage.getItem('cw_readkey')||''});
+function showSettings(){ $('settings').classList.toggle('show') }
+$('configure').onclick=showSettings;
+$('channel').value=config().id;$('readkey').value=config().key;
+$('save').onclick=()=>{let id=$('channel').value.trim(),key=$('readkey').value.trim();if(!/^\d+$/.test(id)){$('configmessage').textContent='Enter the numeric ThingSpeak Channel ID.';return}localStorage.setItem('cw_channel',id);localStorage.setItem('cw_readkey',key);$('settings').classList.remove('show');load()};
+$('refresh').onclick=()=>load();
+function num(v,d=1){let n=Number(v);return v===null||v===undefined||v===''||!Number.isFinite(n)?null:n.toFixed(d)}
+function updateCards(f,when,demo=false){
+ $('temperature').textContent=num(f.field1)!==null?`${num(f.field1)}°F`:'--.-°';
+ $('humidity').textContent=num(f.field2,0)!==null?`${num(f.field2,0)}%`:'--%';
+ $('pressure').textContent=num(f.field3,2)!==null?`${(Number(f.field3)*0.029529983).toFixed(2)} inHg`:'--';
+ $('battery').textContent=num(f.field4,2)!==null?`${num(f.field4,2)} V`:'-- V';
+ $('dewpoint').textContent=num(f.field5)!==null?`${num(f.field5)}°F`:'--°F';
+ $('feels').textContent=num(f.field6)!==null?`Heat index: ${num(f.field6)}°F`:'Heat index unavailable';
+ $('updated').textContent=demo?'Preview mode · sample data':`Last reading: ${new Date(when).toLocaleString()}`;
+ $('age').textContent=demo?'Illustrative readings only':`Station report: ${new Date(when).toLocaleTimeString()}`;
+ $('status').textContent=demo?'◌ Preview mode':'● Station data received';
+ $('status').style.color=demo?'#f4c66b':'#8ae6b4';
+}
+function drawChart(feeds){
+ let values=feeds.map(f=>({x:new Date(f.created_at).getTime(),y:Number(f.field1)})).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.y> -100&&p.y<170);
+ if(!values.length){$('line').setAttribute('d','');$('area').setAttribute('d','');$('chartnote').textContent='No temperature history available yet.';return}
+ let minX=Math.min(...values.map(p=>p.x)),maxX=Math.max(...values.map(p=>p.x));if(minX===maxX)maxX=minX+1;
+ let minY=Math.floor(Math.min(...values.map(p=>p.y))-2),maxY=Math.ceil(Math.max(...values.map(p=>p.y))+2);if(minY===maxY)maxY=minY+2;
+ const x=p=>40+820*(p.x-minX)/(maxX-minX),y=p=>195-160*(p.y-minY)/(maxY-minY);
+ let path=values.map((p,i)=>(i?'L':'M')+x(p).toFixed(1)+','+y(p).toFixed(1)).join(' ');
+ $('line').setAttribute('d',path);$('area').setAttribute('d',path+` L${x(values.at(-1))},195 L${x(values[0])},195 Z`);
+ $('grid').innerHTML='';$('ticks').innerHTML='';
+ for(let i=0;i<4;i++){let yy=35+i*160/3;let line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1','40');line.setAttribute('x2','860');line.setAttribute('y1',yy);line.setAttribute('y2',yy);line.setAttribute('class','chartgrid');$('grid').appendChild(line);let label=document.createElementNS('http://www.w3.org/2000/svg','text');label.setAttribute('x','0');label.setAttribute('y',yy+4);label.setAttribute('class','axis');label.textContent=(maxY-(maxY-minY)*i/3).toFixed(0);$('ticks').appendChild(label)}
+ $('chartnote').textContent=`${values.length} recorded temperature readings · ${new Date(minX).toLocaleTimeString()} to ${new Date(values.at(-1).x).toLocaleTimeString()}`;
+}
+async function load(){
+ const {id,key}=config();if(!id){$('settings').classList.add('show');$('status').textContent='● Setup required';return}
+ $('status').textContent='◌ Loading…';
+ const u=new URL(`https://api.thingspeak.com/channels/${id}/feeds.json`);u.searchParams.set('results','800');if(key)u.searchParams.set('api_key',key);
+ try{const response=await fetch(u);if(!response.ok)throw Error(`ThingSpeak returned HTTP ${response.status}. Check Channel ID and Read API Key.`);
+ const data=await response.json();let feeds=(data.feeds||[]).filter(f=>f.field1!==null||f.field2!==null||f.field3!==null);
+ if(!feeds.length)throw Error('Channel connected but has no measurements yet. Check that your station is uploading.');
+ updateCards(feeds.at(-1),feeds.at(-1).created_at);drawChart(feeds.filter(f=>Date.now()-new Date(f.created_at).getTime()<=86400000));
+ }catch(e){$('status').textContent='● Data unavailable';$('status').style.color='#ffb5a9';$('updated').textContent=e.message;$('chartnote').textContent='Check ThingSpeak channel settings or whether readings have been uploaded.'}
+}
+$('demo').onclick=()=>{let now=Date.now(),f=Array.from({length:144},(_,i)=>{let t=i/143;return {created_at:new Date(now-(143-i)*600000).toISOString(),field1:(79+9*Math.sin(t*6.28-1)).toFixed(1),field2:'29',field3:'1012.7',field4:'4.08',field5:'45.5',field6:'81.2'}});updateCards(f.at(-1),now,true);drawChart(f);$('settings').classList.remove('show')};
+load();setInterval(load,300000);
+</script></body></html>
